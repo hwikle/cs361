@@ -98,6 +98,6 @@ def heap_sort(A: List[int], d: int = 2, copy: bool = False) -> List[int]:
     for i in range(sort_heap.heap_size - 1, -1, -1):
         swap(sort_heap, 0, i)
         sort_heap.heap_size -= 1
-        max_heapify(sort_heap, 0) # O(d*log_d(n))
+        max_heapify(sort_heap, 0)  # O(d*log_d(n))
 
     return sort_heap.nodes
