@@ -1,5 +1,6 @@
 import timeit
 import argparse
+import pickle
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -12,16 +13,11 @@ POLY_EVAL_POINTS = 100
 
 
 def test_runtimes(num_trials: int, num_executions: int, min_n: int, max_n: int, num_input_sizes: int, num_dvals: int,
-                  max_dval: int) -> None:
+                  max_dval: int, write_fig: bool) -> None:
     """
-    Empirically test the runtime of merge sort and insertion sort by taking the minimum value
-    of the specified number of trials, where each trial gives the average runtimes over the
+    Empirically test the runtime of d-ary heapsort by taking the minimum value
+    of the specified number of trials, where each trial gives the average runtime over the
     specified number of executions. Also fit curves to the results and plot them with the data.
-
-    :param num_trials: number of trials to run; minimum will be taken
-    :param num_executions: number of times to execute each algorithm in each trial
-    :param max_exponent: exponent (base 2) of the maximum list size
-    :param num_input_sizes: number of input sizes for which to test the runtimes
     """
 
     start_val = np.log(2) / np.log(max_dval)  # start with d = 2
@@ -57,9 +53,9 @@ def test_runtimes(num_trials: int, num_executions: int, min_n: int, max_n: int, 
             print(f'Testing list size {n} for d={d}...')
             print(f'\tTesting heap sort runtime...')
             heapsort_ts[j] = min(timeit.repeat("heap_sort(rlist, d, copy=True)", setup="rlist=sorted(rand_list(n))",
-                                           repeat=num_trials,
-                                           number=num_executions,
-                                           globals=namespace)) / num_executions
+                                               repeat=num_trials,
+                                               number=num_executions,
+                                               globals=namespace)) / num_executions
 
         # Convert to microseconds for readability
 
@@ -71,6 +67,10 @@ def test_runtimes(num_trials: int, num_executions: int, min_n: int, max_n: int, 
         heapsort_coeffs = np.polyfit(d * n_vals * np.log(n_vals) / np.log(d), heapsort_ts, 1)
         heapsort_fit = np.poly1d(heapsort_coeffs)
         d_fits[d] = heapsort_fit
+
+    # Serialize and save out data for optional later use
+    with open('data.pickle', 'wb') as fout:
+        pickle.dump((times, d_fits), fout)
 
     for k, v in d_fits.items():
         print(f"{k}: {v}")
@@ -88,21 +88,28 @@ def test_runtimes(num_trials: int, num_executions: int, min_n: int, max_n: int, 
     plt.title('Runtime Comparison: d-ary Heaps')
     plt.legend()
 
-    plt.show()
+    if write_fig:
+        with open("d-ary_heapsort.png", 'wb') as fout:
+            plt.savefig(fout, dpi=500)
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
     # Create command-line interface
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--trials", type=int, default=3)
-    parser.add_argument("-x", "--executions", type=int, default=10)
-    parser.add_argument("-m", "--min_input_size", type=int, default=2**8)
-    parser.add_argument("-M", "--max_input_size", type=int, default=2**14)
-    parser.add_argument("-s", "--num_input_sizes", type=int, default=10)
-    parser.add_argument("-d", "--d_values", type=int, default=5)
-    parser.add_argument("-D", "--max_d_val", type=int, default=1000)
+    parser.add_argument("-t", "--trials", type=int, default=3, help="Number of trials to run")
+    parser.add_argument("-x", "--executions", type=int, default=10, help="Number of executions per trial")
+    parser.add_argument("-m", "--min_input_size", type=int, default=2 ** 8, help="Minimum list size")
+    parser.add_argument("-M", "--max_input_size", type=int, default=2 ** 14, help="Maximum list size")
+    parser.add_argument("-s", "--num_input_sizes", type=int, default=10, help="Number of input sizes")
+    parser.add_argument("-d", "--num_d_values", type=int, default=5, help="Number of d-values to test")
+    parser.add_argument("-D", "--max_d_val", type=int, default=1024, help="Maximum d-value to test")
+    parser.add_argument("-w", "--write_fig", action="store_true", dest="write_fig", help="Whether to save the figure "
+                                                                                         "to a file")
+    parser.set_defaults(write_fig=False)
 
     args = parser.parse_args()
 
     test_runtimes(args.trials, args.executions, args.min_input_size, args.max_input_size, args.num_input_sizes,
-                  args.d_values, args.max_d_val)
+                  args.num_d_values, args.max_d_val, args.write_fig)
